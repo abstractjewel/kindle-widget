@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Cozy Library Kindle</title>
+
+    <!-- Script font for book titles (replaces 'Old Script', which most computers don't have) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Pinyon+Script&display=swap" rel="stylesheet">
+
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            background: transparent; /* blends into your Notion page */
+        }
+        #gadget-cover-layer img:hover {
+            transform: scale(1.03);
+        }
+    </style>
+</head>
+<body>
+
+<!-- 1. The Clickable Image Cover Layer -->
+<div id="gadget-cover-layer" style="text-align: center; margin: 20px auto; max-width: 260px;">
+    <!-- Replace the src below with a DIRECT image link (ends in .png, .jpg, or .gif) -->
+    <img src="UR KINDLE CASE IMAGE URL"
+         alt="Open Gadget"
+         style="width: 100%; border-radius: 16px; cursor: pointer; box-shadow: 0px 8px 15px rgba(0,0,0,0.2); transition: transform 0.2s;"
+         onclick="revealKindleGadget()" />
+</div>
+
+<!-- 2. The Interactive Kindle Widget (Initially Hidden) -->
+<div id="kindle-widget-container" style="display: none; position: relative; max-width: 260px; margin: 20px auto;">
+
+    <!-- Close Button -->
+    <div style="text-align: right; margin-bottom: 6px;">
+        <button onclick="closeKindleGadget()" style="background: #8e7051; color: white; border: none; padding: 4px 10px; font-size: 11px; font-family: sans-serif; border-radius: 4px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: opacity 0.2s;">
+            ✕ Close
+        </button>
+    </div>
+
+    <div class="kindle-widget-wrapper" style="position: relative; width: 100%; font-family: sans-serif; user-select: none; box-sizing: border-box;">
+
+        <!-- Kindle Body -->
+        <div style="position: relative; width: 100%; padding-bottom: 140%; background: #222222; border-radius: 16px; box-shadow: 0px 8px 0px #111111, 0px 15px 25px rgba(0,0,0,0.3); border: 2px solid #333; overflow: hidden;">
+
+            <!-- Kindle Branding -->
+            <div style="position: absolute; bottom: 4%; width: 100%; text-align: center; color: #555; font-size: 11px; font-family: sans-serif; font-weight: bold; letter-spacing: 2px; z-index: 5;">KINDLE</div>
+
+            <!-- E-Ink Screen -->
+            <div style="position: absolute; top: 8%; left: 8%; width: 84%; height: 78%; background: #f4f1ea; border-radius: 4px; box-shadow: inset 2px 2px 5px rgba(0,0,0,0.4); overflow: hidden; z-index: 2; border: 1px solid #dcd8cf; display: flex; flex-direction: column; box-sizing: border-box;">
+
+                <!-- Screen Header -->
+                <div style="display: flex; justify-content: space-between; padding: 6px 10px 4px 10px; font-size: 9px; color: #777; border-bottom: 1px dashed #e2ded5; font-family: 'Times New Roman', serif;">
+                    <span id="k-header-title">🍂 Cozy Library</span>
+                    <span>11:54 PM 🔋</span>
+                </div>
+
+                <!-- Book Page -->
+                <div id="kindle-screen" style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 15px; text-align: center; color: #222; transition: opacity 0.15s ease-in-out;">
+                </div>
+
+                <!-- Progress Footer -->
+                <div style="display: flex; justify-content: space-between; padding: 4px 10px 6px 10px; font-size: 9px; color: #777; font-family: 'Times New Roman', serif;">
+                    <span id="k-page-count">Page 1 of 3</span>
+                    <span id="k-percent-count">33%</span>
+                </div>
+            </div>
+
+            <!-- Invisible Page-Turn Zones -->
+            <div onclick="turnKindlePage(-1)" title="Previous Page" style="position: absolute; top: 8%; left: 8%; width: 25%; height: 78%; z-index: 4; cursor: w-resize;"></div>
+            <div onclick="turnKindlePage(1)" title="Next Page" style="position: absolute; top: 8%; left: 33%; width: 59%; height: 78%; z-index: 4; cursor: e-resize;"></div>
+        </div>
+
+        <div style="text-align: center; font-size: 10px; color: #8e7051; margin-top: 10px;">(Tap the left or right side of screen to flip pages!)</div>
+    </div>
+</div>
+
+<script>
+// --- Your Autumn Reading List: edit this list to update your Kindle ---
+const kindlePages = [
+    {
+        title: "Eclipse",
+        author: "Stephenie Meyer",
+        progress: "Page 89 of 400",
+        percent: "15%",
+        review: "🧛🏼 the perfect book for pnw fall vibes!",
+        link: "#"
+    },
+    {
+        title: "Trust Fall",
+        author: "Lynn Painter",
+        progress: "Page 0 of 416",
+        percent: "66%",
+        review: "☕ I plan to read this book next! Lynn painter writes such cute romances that I'm excited for this one! I just know I'm going to love the fall vibes it gives.",
+        link: "#"
+    },
+    {
+        title: "My Roommate is a Vampire",
+        author: "Jenna Levine",
+        progress: "Page 98 of 337",
+        percent: "100%",
+        review: "✨ this book is so cute so far!",
+        link: "#"
+    }
+];
+
+let currentKindleIndex = 0;
+
+function renderKindlePage() {
+    const screen = document.getElementById('kindle-screen');
+    if (!screen) return;
+    const data = kindlePages[currentKindleIndex];
+
+    screen.style.opacity = 0;
+
+    setTimeout(() => {
+        screen.innerHTML = `
+            <div style="font-size: 10px; font-weight: bold; letter-spacing: 1px; color: #666; margin-bottom: 4px; text-transform: uppercase;">📖 NOW READING</div>
+            <a href="${data.link}" target="_blank" style="text-decoration: none; color: #111; font-family: 'Pinyon Script', cursive, serif; font-weight: bold; font-size: 18px; line-height: 1.2; margin-bottom: 2px; display: block;">${data.title}</a>
+            <div style="font-size: 10px; color: #666; font-style: italic; margin-bottom: 12px;">by ${data.author}</div>
+            <div style="font-size: 11px; line-height: 1.4; color: #333; border-top: 1px solid #e2ded5; padding-top: 10px; flex: 1; display: flex; align-items: center;">"${data.review}"</div>
+        `;
+
+        document.getElementById('k-header-title').innerText = "🍂 " + data.title;
+        document.getElementById('k-page-count').innerText = data.progress;
+        document.getElementById('k-percent-count').innerText = data.percent;
+
+        screen.style.opacity = 1;
+    }, 150);
+}
+
+function turnKindlePage(direction) {
+    currentKindleIndex += direction;
+    if (currentKindleIndex >= kindlePages.length) {
+        currentKindleIndex = 0;
+    } else if (currentKindleIndex < 0) {
+        currentKindleIndex = kindlePages.length - 1;
+    }
+    renderKindlePage();
+}
+
+function revealKindleGadget() {
+    document.getElementById('gadget-cover-layer').style.display = 'none';
+    document.getElementById('kindle-widget-container').style.display = 'block';
+    renderKindlePage();
+}
+
+function closeKindleGadget() {
+    document.getElementById('kindle-widget-container').style.display = 'none';
+    document.getElementById('gadget-cover-layer').style.display = 'block';
+}
+</script>
+
+</body>
+</html>
