@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Journal Shelf</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Courier+Prime:ital@0;1&family=Crimson+Pro:ital@0;1&family=Dancing+Script:wght@400;600&family=EB+Garamond:ital@0;1&family=Homemade+Apple&family=Karla:wght@400;600&family=Libre+Baskerville:ital@0;1&family=Lora:ital,wght@0,400;0,600;1,400&family=Nunito:wght@400;600;700&family=Patrick+Hand&family=Playfair+Display:ital@0;1&family=Quicksand:wght@400;500;600;700&family=Special+Elite&family=Work+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#f3ede4; --surface:#fbf8f3; --paper:#fffdf8; --ink:#3b2f25; --muted:#8a7a6a;
+  --accent:#8e7051; --accent-ink:#ffffff; --border:#e2d8ca;
+  --outer-bg:var(--bg); --outer-ink:var(--ink); --outer-muted:var(--muted);
+  --app-font:'Quicksand', system-ui, sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{font-family:var(--app-font);background:var(--outer-bg);color:var(--outer-ink);-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#app{max-width:960px;margin:0 auto;padding:18px 16px 28px}
+
+/* ---------- shared controls ---------- */
+.btn{display:inline-flex;align-items:center;gap:6px;border:none;background:var(--accent);color:var(--accent-ink);border-radius:999px;padding:8px 16px;font-size:13px;font-weight:600}
+.btn:hover{filter:brightness(1.06)}
+.btn.soft{background:var(--surface);color:var(--ink);border:1px solid var(--border)}
+.btn.danger{background:transparent;color:#b5483f;border:1px solid currentColor}
+.icon-btn{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--surface);border:1px solid var(--border);color:var(--ink)}
+.icon-btn svg,.btn svg,.tb svg{width:16px;height:16px}
+.ghost{background:none;border:none;color:var(--outer-muted);font-size:12px;padding:6px 8px;border-radius:8px}
+.ghost:hover{color:var(--outer-ink)}
+
+/* ---------- home ---------- */
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.shelf-title{font-size:22px;font-weight:600;margin:0;letter-spacing:.01em}
+.top-actions{display:flex;gap:8px;align-items:center}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 20px}
+.tab{border:1px solid transparent;background:none;color:var(--outer-muted);border-radius:999px;padding:5px 12px;font-size:13px}
+.tab.on{background:var(--surface);border-color:var(--border);color:var(--ink);font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:26px 20px}
+.card{position:relative;cursor:pointer;text-align:center}
+.cover{position:relative;aspect-ratio:3/4;border-radius:4px 10px 10px 4px;background-size:cover;background-position:center;
+  box-shadow:0 1px 0 rgba(0,0,0,.08),0 12px 22px -12px rgba(0,0,0,.55);overflow:hidden;transition:transform .25s ease}
+.cover::before{content:"";position:absolute;inset:0 auto 0 0;width:9%;
+  background:linear-gradient(90deg,rgba(0,0,0,.30),rgba(0,0,0,.06) 70%,rgba(255,255,255,.14))}
+.cover::after{content:"";position:absolute;top:3px;bottom:3px;right:0;width:3px;border-radius:0 3px 3px 0;
+  background:repeating-linear-gradient(180deg,rgba(255,255,255,.55) 0 1px,rgba(0,0,0,.08) 1px 2px)}
+.card:hover .cover{transform:translateY(-4px) rotate(-.7deg)}
+.cover-label{position:absolute;top:24%;left:20%;right:11%;background:rgba(255,253,248,.92);color:#3b2f25;
+  padding:10px 8px;border-radius:3px;font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-size:16px;line-height:1.15;word-break:break-word}
+.lock{position:absolute;top:8px;right:8px;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;
+  background:rgba(0,0,0,.35);color:#fff}
+.lock svg{width:12px;height:12px}
+.card-title{font-size:13px;font-weight:600;margin-top:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card-meta{font-size:11px;color:var(--outer-muted);margin-top:2px}
+.cat-pill{display:inline-block;margin-top:5px;font-size:10px;padding:2px 8px;border-radius:999px;background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--outer-ink)}
+.card-edit{position:absolute;top:6px;left:12%;width:26px;height:26px;border-radius:50%;border:none;display:grid;place-items:center;
+  background:rgba(255,255,255,.85);color:#3b2f25;opacity:0;transition:opacity .15s}
+.card-edit svg{width:14px;height:14px}
+.card:hover .card-edit,.card-edit:focus-visible{opacity:1}
+@media (hover:none){.card-edit{opacity:1}}
+.empty{text-align:center;padding:60px 20px;color:var(--outer-muted)}
+.empty p{margin:0 0 16px}
+.banner{background:#fbe9d8;color:#6b3f16;border-radius:10px;padding:10px 14px;font-size:12px;margin-bottom:14px}
+
+/* ---------- editor ---------- */
+.editor{display:flex;flex-direction:column;align-items:center;gap:12px}
+.toolbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:3px;background:var(--surface);border:1px solid var(--border);
+  border-radius:14px;padding:5px 8px;color:var(--ink);max-width:100%;box-shadow:0 4px 14px -10px rgba(0,0,0,.4)}
+.tb{width:30px;height:30px;display:grid;place-items:center;border:none;background:none;border-radius:8px;color:var(--ink);font-size:14px}
+.tb:hover{background:color-mix(in srgb,var(--accent) 12%,transparent)}
+.tb.on{background:color-mix(in srgb,var(--accent) 22%,transparent)}
+.tb-select{height:28px;border:1px solid var(--border);background:var(--paper);border-radius:8px;font-size:12px;padding:0 4px;color:var(--ink);max-width:118px}
+.sep{width:1px;height:18px;background:var(--border);margin:0 4px}
+.swatch-btn{position:relative;width:30px;height:30px;display:grid;place-items:center;border-radius:8px}
+.swatch-btn input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.swatch-dot{width:16px;height:16px;border-radius:50%;border:2px solid var(--surface);box-shadow:0 0 0 1px var(--border)}
+.date-chip{display:inline-flex;align-items:center;gap:6px;border:none;background:color-mix(in srgb,var(--accent) 22%,var(--surface));color:var(--ink);
+  border-radius:999px;padding:6px 14px;font-size:13px}
+.date-chip svg{width:14px;height:14px}
+.date-wrap{position:relative}
+.date-input{position:absolute;left:0;top:0;width:100%;height:100%;opacity:0;pointer-events:none}
+.page-row{display:flex;align-items:center;gap:10px;width:100%;justify-content:center}
+.arrow{flex:none;border:none;background:none;color:var(--outer-muted);font-size:30px;line-height:1;padding:8px 4px}
+.arrow:disabled{opacity:.25;cursor:default}
+.paper{--rule:color-mix(in srgb,var(--accent) 40%,transparent);--page-font:'Lora',Georgia,serif;--page-size:15px;
+  position:relative;width:min(600px,100%);min-height:600px;background-color:var(--paper);color:var(--ink);
+  border-radius:3px 12px 12px 3px;padding:28px 30px 40px 38px;
+  box-shadow:inset 6px 0 10px -8px rgba(0,0,0,.35),0 1px 0 rgba(0,0,0,.05),0 16px 30px -18px rgba(0,0,0,.45);
+  border-right:5px solid color-mix(in srgb,var(--accent) 55%,var(--paper))}
+.paper.p-lined{background-image:linear-gradient(180deg,transparent 27px,var(--rule) 27px,var(--rule) 28px);background-size:100% 28px}
+.paper.p-grid{background-image:linear-gradient(var(--rule) 1px,transparent 1px),linear-gradient(90deg,var(--rule) 1px,transparent 1px);background-size:28px 28px}
+.paper.p-dotted{background-image:radial-gradient(circle,var(--rule) 1.3px,transparent 1.6px);background-size:28px 28px;background-position:-14px -14px}
+.subject{display:block;width:100%;border:none;background:transparent;outline:none;font-family:var(--page-font);font-size:calc(var(--page-size) * 1.3);
+  font-weight:600;height:56px;line-height:56px;padding:0;color:var(--ink)}
+.subject::placeholder{color:var(--muted);opacity:.6}
+.content{font-family:var(--page-font);font-size:var(--page-size);line-height:28px;outline:none;min-height:504px;word-wrap:break-word}
+.content:empty::before{content:attr(data-placeholder);color:var(--muted);opacity:.6}
+.content p,.content div{margin:0}
+.content h1{font-size:1.9em;line-height:56px;margin:0;font-weight:600}
+.content h2{font-size:1.4em;line-height:28px;margin:0;font-weight:600}
+.content h3{font-size:1.15em;line-height:28px;margin:0;font-weight:600}
+.content::after{content:"";display:table;clear:both}
+.pic{max-width:100%;height:auto;border-radius:6px;cursor:pointer}
+.pic-left{float:left;margin:6px 16px 8px 0}
+.pic-right{float:right;margin:6px 0 8px 16px}
+.pic-center{display:block;float:none;margin:8px auto}
+.pic.sel{outline:2px solid var(--accent);outline-offset:2px}
+.page-foot{display:flex;align-items:center;justify-content:space-between;width:min(600px,100%);font-size:12px;color:var(--outer-muted)}
+
+/* stickers */
+.sticker-layer{position:absolute;inset:0;pointer-events:none}
+.sticker{position:absolute;pointer-events:auto;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
+.sticker img{display:block;width:100%;height:auto;pointer-events:none;-webkit-user-drag:none}
+.sticker .h,.sticker .rot,.sticker .del{display:none}
+.sticker.sel{outline:1.5px dashed var(--accent);outline-offset:3px}
+.sticker.sel .h{display:block;position:absolute;width:12px;height:12px;border-radius:50%;background:var(--paper);border:2px solid var(--accent)}
+.h.tl{left:-9px;top:-9px;cursor:nwse-resize}.h.tr{right:-9px;top:-9px;cursor:nesw-resize}
+.h.bl{left:-9px;bottom:-9px;cursor:nesw-resize}.h.br{right:-9px;bottom:-9px;cursor:nwse-resize}
+.sticker.sel .rot,.sticker.sel .del{display:grid;place-items:center;position:absolute;left:50%;width:24px;height:24px;border-radius:50%;
+  border:none;background:var(--accent);color:var(--accent-ink);transform:translateX(-50%)}
+.sticker.sel .rot{top:-38px;cursor:grab}
+.sticker.sel .del{bottom:-38px;background:#b5483f;color:#fff}
+.rot svg,.del svg{width:13px;height:13px}
+
+/* popovers, modals, toast */
+.pop{position:fixed;z-index:40;background:var(--surface);color:var(--ink);border:1px solid var(--border);border-radius:12px;padding:10px;
+  box-shadow:0 14px 34px -14px rgba(0,0,0,.45);font-size:12px}
+.pop-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.pop-label{color:var(--muted);margin:2px 0 6px}
+.paper-opt{display:flex;flex-direction:column;align-items:center;gap:4px;border:1px solid var(--border);background:var(--paper);border-radius:8px;padding:6px;font-size:11px;color:var(--ink)}
+.paper-opt.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.paper-opt i{display:block;width:34px;height:26px;border-radius:3px;background-color:var(--paper);border:1px solid var(--border);--rule:var(--muted)}
+.paper-opt i.p-lined{background-image:linear-gradient(180deg,transparent 6px,var(--rule) 6px,var(--rule) 7px);background-size:100% 7px}
+.paper-opt i.p-grid{background-image:linear-gradient(var(--rule) 1px,transparent 1px),linear-gradient(90deg,var(--rule) 1px,transparent 1px);background-size:7px 7px}
+.paper-opt i.p-dotted{background-image:radial-gradient(circle,var(--rule) .8px,transparent 1px);background-size:7px 7px}
+.dot{width:22px;height:22px;border-radius:50%;border:2px solid var(--surface);box-shadow:0 0 0 1px var(--border);padding:0}
+.dot.on{box-shadow:0 0 0 2px var(--accent)}
+.overlay{position:fixed;inset:0;z-index:50;background:rgba(20,14,10,.38);display:flex;align-items:center;justify-content:center;padding:16px}
+.modal{background:var(--surface);color:var(--ink);border-radius:16px;padding:20px;width:min(440px,100%);max-height:calc(100vh - 32px);overflow:auto;
+  box-shadow:0 24px 60px -20px rgba(0,0,0,.5)}
+.modal h2{margin:0 0 14px;font-size:17px}
+.field{margin-bottom:16px}
+.field>label,.field-title{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px}
+.text-in{width:100%;border:1px solid var(--border);background:var(--paper);border-radius:10px;padding:9px 11px;font-size:14px;color:var(--ink)}
+.cover-edit{display:flex;gap:14px;align-items:flex-start}
+.cover-edit .cover{width:84px;flex:none}
+.cover-edit .cover-label{font-size:11px;padding:6px 4px}
+.cover-tools{display:flex;flex-direction:column;gap:8px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--border);background:var(--paper);border-radius:999px;padding:5px 12px;font-size:12px;color:var(--ink)}
+.chip.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.modal-actions{display:flex;justify-content:space-between;gap:8px;margin-top:6px;flex-wrap:wrap}
+.modal-actions .right{display:flex;gap:8px;margin-left:auto}
+.note{font-size:11px;color:var(--muted);line-height:1.5;margin:6px 0 0}
+.themes{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px}
+.theme-opt{border:1px solid var(--border);border-radius:10px;padding:6px;font-size:11px;text-align:center;background:var(--paper);color:var(--ink)}
+.theme-opt.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.theme-opt span{display:flex;height:22px;border-radius:6px;overflow:hidden;margin-bottom:4px;border:1px solid rgba(0,0,0,.08)}
+.theme-opt span b{flex:1}
+.toggle{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;padding:6px 0}
+.switch{position:relative;width:38px;height:22px;flex:none}
+.switch input{opacity:0;width:100%;height:100%;margin:0;position:absolute;cursor:pointer}
+.switch i{position:absolute;inset:0;border-radius:999px;background:var(--border);pointer-events:none;transition:background .15s}
+.switch i::after{content:"";position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .15s}
+.switch input:checked+i{background:var(--accent)}
+.switch input:checked+i::after{transform:translateX(16px)}
+.link-row{display:flex;gap:6px;margin-bottom:6px}
+.link-row input{flex:1;font-size:11px;padding:7px 9px}
+.pin-dots{display:flex;justify-content:center;gap:12px;margin:6px 0 18px}
+.pin-dots i{width:13px;height:13px;border-radius:50%;border:2px solid var(--accent)}
+.pin-dots i.f{background:var(--accent)}
+.pin-dots.shake{animation:shake .35s}
+@keyframes shake{25%{transform:translateX(-8px)}50%{transform:translateX(8px)}75%{transform:translateX(-4px)}}
+.keypad{display:grid;grid-template-columns:repeat(3,64px);gap:10px;justify-content:center}
+.key{height:52px;border-radius:14px;border:1px solid var(--border);background:var(--paper);font-size:19px;color:var(--ink)}
+.key.blank{visibility:hidden}
+.pin-modal{text-align:center}
+.pin-err{color:#b5483f;font-size:12px;min-height:16px;margin-top:10px}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:9px 16px;border-radius:999px;font-size:12px;z-index:60}
+@media (max-width:560px){
+  .paper{padding:28px 18px 36px 24px;min-height:520px}
+  .arrow{display:none}
+  .tb-select{max-width:92px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+/* =====================================================================
+   Journal Shelf — a journaling widget for Notion embeds.
+   Everything saves in this browser (IndexedDB). Use Settings → Backup.
+   ===================================================================== */
+
+const THEMES = {
+  maple:    {name:'Maple',     dark:false, c:{bg:'#f3ede4',surface:'#fbf8f3',paper:'#fffdf8',ink:'#3b2f25',muted:'#8a7a6a',accent:'#8e7051','accent-ink':'#ffffff',border:'#e2d8ca'}},
+  rosewater:{name:'Rosewater', dark:false, c:{bg:'#f6eeee',surface:'#fdf8f7',paper:'#fffcfb',ink:'#4a3236',muted:'#9b8085',accent:'#b98b92','accent-ink':'#ffffff',border:'#ecdcdc'}},
+  sage:     {name:'Sage',      dark:false, c:{bg:'#eef0e8',surface:'#f8f9f4',paper:'#fdfdf9',ink:'#2f3a2c',muted:'#7c8774',accent:'#7d8f69','accent-ink':'#ffffff',border:'#dde2d2'}},
+  lavender: {name:'Lavender',  dark:false, c:{bg:'#f0edf5',surface:'#faf8fc',paper:'#fefdff',ink:'#3a3147',muted:'#8a809a',accent:'#9a86b5','accent-ink':'#ffffff',border:'#e3ddec'}},
+  mist:     {name:'Mist',      dark:false, c:{bg:'#ebf0f2',surface:'#f7fafb',paper:'#fdfeff',ink:'#2a3a42',muted:'#75878f',accent:'#6f93a3','accent-ink':'#ffffff',border:'#d9e3e7'}},
+  honey:    {name:'Honey',     dark:false, c:{bg:'#f7f0dc',surface:'#fdf9ee',paper:'#fffdf5',ink:'#45391c',muted:'#94845a',accent:'#b8913a','accent-ink':'#ffffff',border:'#eadfbe'}},
+  cherry:   {name:'Cherry',    dark:false, c:{bg:'#f6e9e7',surface:'#fdf6f5',paper:'#fffbfa',ink:'#4a2422',muted:'#9b6b67',accent:'#a8433d','accent-ink':'#ffffff',border:'#efd5d1'}},
+  linen:    {name:'Linen',     dark:false, c:{bg:'#efefed',surface:'#f9f9f8',paper:'#ffffff',ink:'#2b2b2b',muted:'#7d7d7b',accent:'#5f5f5c','accent-ink':'#ffffff',border:'#dededb'}},
+  cocoa:    {name:'Cocoa',     dark:true,  c:{bg:'#2a221d',surface:'#352b25',paper:'#3e332c',ink:'#efe4d8',muted:'#b3a191',accent:'#c49a73','accent-ink':'#221a15',border:'#4d4037'}},
+  midnight: {name:'Midnight',  dark:true,  c:{bg:'#1c2030',surface:'#252a3c',paper:'#2c3247',ink:'#e6e8f2',muted:'#9aa0b8',accent:'#8ea2e0','accent-ink':'#161a28',border:'#3a4159'}},
+  forest:   {name:'Forest',    dark:true,  c:{bg:'#1e2620',surface:'#27302a',paper:'#2e3831',ink:'#e4ece4',muted:'#9db09f',accent:'#8fb58f','accent-ink':'#162018',border:'#3c483e'}},
+  plum:     {name:'Plum',      dark:true,  c:{bg:'#2a1f2b',surface:'#352837',paper:'#3e2f40',ink:'#f0e4ef',muted:'#b69bb3',accent:'#c98bbf','accent-ink':'#21171f',border:'#4d3c50'}},
+  ink:      {name:'Ink',       dark:true,  c:{bg:'#1d1d1d',surface:'#262626',paper:'#2e2e2e',ink:'#ececec',muted:'#a0a0a0',accent:'#d0b48a','accent-ink':'#1d1d1d',border:'#3d3d3d'}}
+};
+const EDITOR_FONTS = [
+  ['Lora','serif'],['EB Garamond','serif'],['Cormorant Garamond','serif'],['Libre Baskerville','serif'],
+  ['Crimson Pro','serif'],['Playfair Display','serif'],['Nunito','sans-serif'],['Quicksand','sans-serif'],
+  ['Karla','sans-serif'],['Work Sans','sans-serif'],['Caveat','cursive'],['Patrick Hand','cursive'],
+  ['Homemade Apple','cursive'],['Dancing Script','cursive'],['Special Elite','monospace'],['Courier Prime','monospace']
+];
+const APP_FONTS = [['Quicksand','sans-serif'],['Nunito','sans-serif'],['Work Sans','sans-serif'],['Lora','serif'],['Cormorant Garamond','serif'],['Courier Prime','monospace']];
+const LINE_COLORS = [
+  ['Theme','color-mix(in srgb, var(--accent) 40%, transparent)'],
+  ['Pencil','rgba(128,128,128,.38)'],['Blush','rgba(214,135,148,.45)'],['Sage','rgba(118,160,112,.45)'],
+  ['Sky','rgba(104,148,204,.45)'],['Lilac','rgba(158,128,204,.45)'],['Butter','rgba(214,176,72,.55)']
+];
+const COVER_COLORS = ['#8e7051','#3d332c','#b98b92','#7d8f69','#6f93a3','#c9a14a','#5b4a6b','#2c3247'];
+const SIZES = [9,10,11,12,13,14,15,16,17,18];
+
+const ICON = {
+  gear:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
+  plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+  home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>',
+  image:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.8"/><path d="m21 16-5-5-9 9"/></svg>',
+  sticker:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h7l8-8V6a3 3 0 0 0-3-3z"/><path d="M13 21v-5a3 3 0 0 1 3-3h5"/><path d="M8.5 13.5c1 1.2 3 1.4 4.5.6"/><path d="M9 9h.01M14 9h.01"/></svg>',
+  subject:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 5h14M12 5v8M4 18h16M4 21h10"/></svg>',
+  paper:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l4 4v14H6z"/><path d="M9 11h7M9 14.5h7M9 18h4"/></svg>',
+  cal:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>',
+  lock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
+  dots:'<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>',
+  alL:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M4 10h10M4 14h16M4 18h10"/></svg>',
+  alC:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M7 10h10M4 14h16M7 18h10"/></svg>',
+  alR:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M10 10h10M4 14h16M10 18h10"/></svg>',
+  alJ:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>',
+  rot:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>',
+  trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>'
+};
+
+/* ---------------- storage (IndexedDB, in-memory fallback) ---------------- */
+let dbPromise = null, storageOK = true;
+const memory = new Map();
+function openDB(){
+  if (dbPromise) return dbPromise;
+  dbPromise = new Promise((res, rej) => {
+    try {
+      const r = indexedDB.open('journal-shelf', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('kv');
+      r.onsuccess = () => res(r.result);
+      r.onerror = () => rej(r.error);
+    } catch (e) { rej(e); }
+  });
+  return dbPromise;
+}
+function req(p){ return new Promise((res, rej) => { p.onsuccess = () => res(p.result); p.onerror = () => rej(p.error); }); }
+async function kvSet(key, val){
+  memory.set(key, val);
+  try {
+    const db = await openDB();
+    await new Promise((res, rej) => {
+      const tx = db.transaction('kv', 'readwrite');
+      tx.objectStore('kv').put(val, key);
+      tx.oncomplete = res; tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error);
+    });
+  } catch (e) { markStorageFailed(e); }
+}
+async function kvDel(key){
+  memory.delete(key);
+  try { const db = await openDB(); await req(db.transaction('kv', 'readwrite').objectStore('kv').delete(key)); }
+  catch (e) { markStorageFailed(e); }
+}
+async function kvLoadAll(){
+  try {
+    const db = await openDB();
+    const store = db.transaction('kv').objectStore('kv');
+    const [keys, vals] = await Promise.all([req(store.getAllKeys()), req(store.getAll())]);
+    const out = new Map(); keys.forEach((k, i) => out.set(k, vals[i])); return out;
+  } catch (e) { markStorageFailed(e); return memory; }
+}
+function markStorageFailed(e){
+  console.warn('Storage problem:', e);
+  if (storageOK) { storageOK = false; render(); }
+  if (e && e.name === 'QuotaExceededError') toast('Storage is full. Try smaller photos, or back up and delete old journals.');
+}
+
+/* ---------------- state ---------------- */
+const DEFAULT_SETTINGS = {
+  shelfName:'My journals', theme:'maple', appFont:'Quicksand',
+  categories:['Daily','Dreams','Reading'], transparent:false, darkPage:false, lastBackup:null
+};
+const S = { settings:{...DEFAULT_SETTINGS}, journals:[], view:'home', jid:null, page:0, filter:'all', fixedCat:null, unlocked:new Set() };
+const app = document.getElementById('app');
+const J = () => S.journals.find(j => j.id === S.jid);
+const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fontStack = name => { const f = [...EDITOR_FONTS, ...APP_FONTS].find(x => x[0] === name) || ['Lora','serif']; return `'${f[0]}', ${f[1]}`; };
+const isImgData = s => typeof s === 'string' && /^data:image\/(png|jpe?g|gif|webp);base64,/i.test(s);
+
+function todayISO(){ const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function friendlyDate(iso){
+  if (!iso) return 'Add date';
+  const d = new Date(iso + 'T00:00'), t = new Date(); t.setHours(0,0,0,0);
+  const diff = Math.round((t - d) / 864e5);
+  if (diff === 0) return 'Today';
+  if (diff === 1) return 'Yesterday';
+  return d.toLocaleDateString(undefined, {month:'short', day:'numeric', year: d.getFullYear() === t.getFullYear() ? undefined : 'numeric'});
+}
+function newPage(){ return {id:uid(), date:todayISO(), subject:'', html:'', stickers:[]}; }
+
+const saveTimers = {};
+function saveJournal(j, now){
+  j.updated = Date.now();
+  clearTimeout(saveTimers[j.id]);
+  const run = () => kvSet('j:' + j.id, j);
+  if (now) return run();
+  saveTimers[j.id] = setTimeout(run, 400);
+}
+function flushSaves(){ Object.keys(saveTimers).forEach(id => { clearTimeout(saveTimers[id]); const j = S.journals.find(x => x.id === id); if (j) kvSet('j:' + id, j); delete saveTimers[id]; }); }
+function saveSettings(){ kvSet('settings', S.settings); }
+window.addEventListener('pagehide', flushSaves);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushSaves(); });
+
+/* ---------------- helpers ---------------- */
+function sanitize(html){
+  const t = document.createElement('template'); t.innerHTML = html || '';
+  t.content.querySelectorAll('script,iframe,object,embed,link,meta,style,form,input,button,textarea,select,svg,math').forEach(n => n.remove());
+  t.content.querySelectorAll('*').forEach(el => {
+    [...el.attributes].forEach(a => {
+      const n = a.name.toLowerCase();
+      if (n.startsWith('on') || n === 'srcset' || ((n === 'href' || n === 'src') && /^\s*javascript:/i.test(a.value))) el.removeAttribute(a.name);
+    });
+    if (el.tagName === 'IMG' && !isImgData(el.getAttribute('src'))) el.remove();
+  });
+  return t.innerHTML;
+}
+async function sha(text){
+  if (window.crypto && crypto.subtle) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+    return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2,'0')).join('');
+  }
+  let h = 5381; for (const ch of text) h = ((h << 5) + h + ch.charCodeAt(0)) | 0; return 'x' + h;
+}
+const pinHash = (pin, id) => sha('journal-shelf:' + id + ':' + pin);
+
+function pickFile(accept){
+  return new Promise(res => {
+    const i = document.createElement('input');
+    i.type = 'file'; i.accept = accept; i.style.display = 'none';
+    i.onchange = () => { res(i.files[0] || null); i.remove(); };
+    document.body.appendChild(i); i.click();
+  });
+}
+async function shrinkImage(file, max, keepAlpha){
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image(); img.src = url; await img.decode();
+    const sc = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(img.naturalWidth * sc)); c.height = Math.max(1, Math.round(img.naturalHeight * sc));
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    return keepAlpha ? c.toDataURL('image/png') : c.toDataURL('image/jpeg', 0.85);
+  } finally { setTimeout(() => URL.revokeObjectURL(url), 2000); }
+}
+let toastTimer;
+function toast(msg){
+  document.querySelector('.toast')?.remove();
+  const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; t.setAttribute('role','status');
+  document.body.appendChild(t); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.remove(), 2600);
+}
+function closePop(){ document.querySelector('.pop')?.remove(); }
+function openPop(anchor, html, onClick){
+  closePop();
+  const p = document.createElement('div'); p.className = 'pop'; p.innerHTML = html;
+  document.body.appendChild(p);
+  const r = anchor.getBoundingClientRect(), w = p.offsetWidth;
+  p.style.top = Math.min(window.innerHeight - p.offsetHeight - 8, r.bottom + 6) + 'px';
+  p.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, r.left + r.width / 2 - w / 2)) + 'px';
+  p.addEventListener('mousedown', e => { if (!e.target.closest('input,select')) e.preventDefault(); });
+  p.addEventListener('click', e => onClick(e, p));
+  return p;
+}
+document.addEventListener('pointerdown', e => {
+  if (!e.target.closest('.pop') && !e.target.closest('[data-pop]')) closePop();
+});
+function modal(html, setup){
+  const o = document.createElement('div'); o.className = 'overlay';
+  o.innerHTML = `<div class="modal" role="dialog" aria-modal="true">${html}</div>`;
+  const close = () => { o.remove(); document.removeEventListener('keydown', onKey); };
+  const onKey = e => { if (e.key === 'Escape') close(); };
+  o.addEventListener('pointerdown', e => { if (e.target === o) close(); });
+  document.addEventListener('keydown', onKey);
+  document.body.appendChild(o);
+  setup(o.querySelector('.modal'), close);
+  return close;
+}
+
+/* ---------------- theme ---------------- */
+function applyTheme(){
+  const s = S.settings, t = THEMES[s.theme] || THEMES.maple, st = document.documentElement.style;
+  Object.entries(t.c).forEach(([k, v]) => st.setProperty('--' + k, v));
+  st.setProperty('--app-font', fontStack(s.appFont));
+  st.setProperty('--outer-bg', s.transparent ? 'transparent' : s.darkPage ? '#191919' : 'var(--bg)');
+  const light = s.darkPage || (!s.transparent && t.dark);
+  st.setProperty('--outer-ink', s.darkPage ? '#ebe5de' : s.transparent ? '#37352f' : 'var(--ink)');
+  st.setProperty('--outer-muted', s.darkPage ? '#a59d94' : s.transparent ? '#7d7a75' : 'var(--muted)');
+  document.documentElement.style.colorScheme = light ? 'dark' : 'light';
+}
+
+/* ---------------- rendering ---------------- */
+function render(){
+  closePop();
+  applyTheme();
+  if (S.view === 'editor' && J()) renderEditor(); else { S.view = 'home'; renderHome(); }
+}
+function coverStyle(j){
+  return isImgData(j.cover) ? `background-image:url(${j.cover})` : `background-color:${esc(j.coverColor || COVER_COLORS[0])}`;
+}
+function coverHTML(j){
+  return `<div class="cover" style="${coverStyle(j)}">${!isImgData(j.cover) ? `<span class="cover-label">${esc(j.title || 'Untitled')}</span>` : ''}${j.pinHash ? `<span class="lock" title="PIN locked">${ICON.lock}</span>` : ''}</div>`;
+}
+function renderHome(){
+  const s = S.settings, fixed = S.fixedCat;
+  const filter = fixed !== null ? String(fixed) : S.filter;
+  const list = S.journals.filter(j => filter === 'all' || j.category === Number(filter)).sort((a, b) => b.created - a.created);
+  const title = fixed !== null ? s.categories[fixed] : s.shelfName;
+  app.innerHTML = `
+    ${!storageOK ? `<div class="banner">This browser isn’t letting the widget save. Your writing will disappear when you close it. Try opening the widget link directly in Chrome, Safari or Firefox.</div>` : ''}
+    <header class="top">
+      <h1 class="shelf-title">${esc(title)}</h1>
+      <div class="top-actions">
+        <button class="icon-btn" data-act="settings" aria-label="Settings" title="Settings">${ICON.gear}</button>
+        <button class="btn" data-act="new">${ICON.plus} New journal</button>
+      </div>
+    </header>
+    ${fixed === null ? `<nav class="tabs" aria-label="Categories">
+      <button class="tab ${filter === 'all' ? 'on' : ''}" data-act="filter" data-v="all">All</button>
+      ${s.categories.map((c, i) => `<button class="tab ${filter === String(i) ? 'on' : ''}" data-act="filter" data-v="${i}">${esc(c)}</button>`).join('')}
+    </nav>` : ''}
+    ${list.length ? `<div class="grid">${list.map(j => {
+      const n = j.pages.length, cat = j.category !== null && j.category !== undefined ? s.categories[j.category] : '';
+      return `<div class="card" data-act="open" data-id="${j.id}" tabindex="0" role="button" aria-label="Open ${esc(j.title)}">
+        ${coverHTML(j)}
+        <button class="card-edit" data-act="edit" data-id="${j.id}" aria-label="Edit ${esc(j.title)}" title="Edit cover and details">${ICON.dots}</button>
+        <div class="card-title">${esc(j.title || 'Untitled')}</div>
+        <div class="card-meta">${n} page${n === 1 ? '' : 's'}</div>
+        ${cat ? `<span class="cat-pill">${esc(cat)}</span>` : ''}
+      </div>`; }).join('')}</div>`
+    : `<div class="empty"><p>${S.journals.length ? 'No journals in this category yet.' : 'Your shelf is empty.'}</p><button class="btn" data-act="new">${ICON.plus} Create a journal</button></div>`}
+  `;
+}
+
+function renderEditor(){
+  const j = J();
+  if (S.page >= j.pages.length) S.page = j.pages.length - 1;
+  const p = j.pages[S.page], last = S.page === j.pages.length - 1;
+  const rule = (LINE_COLORS[j.lineColor] || LINE_COLORS[0])[1];
+  app.innerHTML = `
+  <div class="editor">
+    <div class="toolbar" role="toolbar" aria-label="Formatting">
+      <button class="tb" data-act="home" title="Back to journals" aria-label="Back to journals">${ICON.home}</button>
+      <span class="sep"></span>
+      <select class="tb-select" data-ctl="block" title="Text style" aria-label="Text style">
+        <option value="p">Normal</option><option value="h1">Heading 1</option><option value="h2">Heading 2</option><option value="h3">Heading 3</option>
+      </select>
+      <button class="tb" data-cmd="bold" title="Bold" aria-label="Bold"><b>B</b></button>
+      <button class="tb" data-cmd="italic" title="Italic" aria-label="Italic"><i style="font-family:Georgia,serif">I</i></button>
+      <button class="tb" data-cmd="underline" title="Underline" aria-label="Underline"><u>U</u></button>
+      <span class="sep"></span>
+      <button class="tb" data-cmd="justifyLeft" title="Align left" aria-label="Align left">${ICON.alL}</button>
+      <button class="tb" data-cmd="justifyCenter" title="Align center" aria-label="Align center">${ICON.alC}</button>
+      <button class="tb" data-cmd="justifyRight" title="Align right" aria-label="Align right">${ICON.alR}</button>
+      <button class="tb" data-cmd="justifyFull" title="Justify" aria-label="Justify">${ICON.alJ}</button>
+      <span class="sep"></span>
+      <label class="swatch-btn" title="Text color"><span class="swatch-dot" style="background:${esc(j.lastColor || '#3b2f25')}"></span><input type="color" data-ctl="color" value="${esc(j.lastColor || '#3b2f25')}" aria-label="Text color"></label>
+      <select class="tb-select" data-ctl="font" title="Font" aria-label="Font">
+        ${EDITOR_FONTS.map(f => `<option value="${f[0]}" ${f[0] === j.font ? 'selected' : ''} style="font-family:'${f[0]}'">${f[0]}</option>`).join('')}
+      </select>
+      <select class="tb-select" data-ctl="size" title="Font size" aria-label="Font size" style="width:58px">
+        ${SIZES.map(n => `<option value="${n}" ${n === j.fontSize ? 'selected' : ''}>${n}</option>`).join('')}
+      </select>
+      <span class="sep"></span>
+      <button class="tb" data-act="add-image" title="Add photo" aria-label="Add photo">${ICON.image}</button>
+      <button class="tb" data-act="add-sticker" title="Add sticker" aria-label="Add sticker">${ICON.sticker}</button>
+      <button class="tb ${j.showSubject ? 'on' : ''}" data-act="subject" title="Subject line" aria-label="Subject line" aria-pressed="${!!j.showSubject}">${ICON.subject}</button>
+      <button class="tb" data-act="paper" data-pop title="Paper style" aria-label="Paper style">${ICON.paper}</button>
+    </div>
+    <div class="date-wrap">
+      <button class="date-chip" data-act="date">${ICON.cal}<span>${esc(friendlyDate(p.date))}</span></button>
+      <input type="date" class="date-input" value="${esc(p.date || '')}" tabindex="-1" aria-label="Page date">
+    </div>
+    <div class="page-row">
+      <button class="arrow" data-act="prev" ${S.page === 0 ? 'disabled' : ''} aria-label="Previous page">&#8249;</button>
+      <div class="paper ${['lined','grid','dotted'].includes(j.paper) ? 'p-' + j.paper : ''}" style="--rule:${rule};--page-font:${fontStack(j.font)};--page-size:${j.fontSize}px">
+        ${j.showSubject ? `<input class="subject" placeholder="Subject" value="${esc(p.subject || '')}" aria-label="Subject">` : ''}
+        <div class="content" contenteditable="true" spellcheck="true" data-placeholder="Start writing…"></div>
+        <div class="sticker-layer"></div>
+      </div>
+      <button class="arrow" data-act="next" ${last ? 'disabled' : ''} aria-label="Next page">&#8250;</button>
+    </div>
+    <div class="page-foot">
+      <button class="ghost" data-act="del-page">Delete page</button>
+      <span>Page ${S.page + 1} of ${j.pages.length}</span>
+      <button class="ghost" data-act="add-page">+ New page</button>
+    </div>
+  </div>`;
+  const content = app.querySelector('.content');
+  content.innerHTML = sanitize(p.html);
+  bindContent(content);
+  const subj = app.querySelector('.subject');
+  if (subj) subj.addEventListener('input', () => { p.subject = subj.value; saveJournal(j); });
+  const di = app.querySelector('.date-input');
+  di.addEventListener('change', () => { p.date = di.value; app.querySelector('.date-chip span').textContent = friendlyDate(p.date); saveJournal(j); });
+  renderStickers();
+  paperObserver.disconnect(); paperObserver.observe(app.querySelector('.paper'));
+}
+
+/* ---------------- content editing ---------------- */
+let savedRange = null, selImg = null;
+const contentEl = () => app.querySelector('.content');
+document.addEventListener('selectionchange', () => {
+  const c = contentEl(), sel = getSelection();
+  if (c && sel.rangeCount && c.contains(sel.anchorNode)) savedRange = sel.getRangeAt(0).cloneRange();
+});
+function restoreRange(){
+  const c = contentEl(); if (!c) return;
+  c.focus({preventScroll:true});
+  const sel = getSelection(); sel.removeAllRanges();
+  if (savedRange && c.contains(savedRange.startContainer)) sel.addRange(savedRange);
+  else { const r = document.createRange(); r.selectNodeContents(c); r.collapse(false); sel.addRange(r); }
+}
+function contentChanged(){
+  const j = J(), c = contentEl(); if (!j || !c) return;
+  j.pages[S.page].html = c.innerHTML; saveJournal(j);
+}
+function exec(cmd, val){ restoreRange(); document.execCommand(cmd, false, val); contentChanged(); }
+function hasSelection(){ restoreRange(); const s = getSelection(); return s.rangeCount && !s.isCollapsed; }
+
+function bindContent(c){
+  c.addEventListener('input', contentChanged);
+  c.addEventListener('paste', e => {
+    const text = e.clipboardData?.getData('text/plain');
+    if (text != null) { e.preventDefault(); document.execCommand('insertText', false, text); }
+  });
+  c.addEventListener('keyup', syncBlockSelect);
+  c.addEventListener('mouseup', syncBlockSelect);
+  c.addEventListener('click', e => {
+    const img = e.target.closest('img.pic');
+    if (img) { e.preventDefault(); selectImage(img); }
+  });
+}
+function syncBlockSelect(){
+  const sel = app.querySelector('[data-ctl="block"]'); if (!sel) return;
+  const v = (document.queryCommandValue('formatBlock') || '').toLowerCase().replace(/[<>]/g, '');
+  sel.value = ['h1','h2','h3'].includes(v) ? v : 'p';
+}
+function selectImage(img){
+  app.querySelectorAll('img.pic.sel').forEach(i => i.classList.remove('sel'));
+  img.classList.add('sel'); selImg = img;
+  const pos = img.classList.contains('pic-left') ? 'left' : img.classList.contains('pic-center') ? 'center' : 'right';
+  openPop(img, `
+    <div class="pop-label">Photo position</div>
+    <div class="pop-row" style="margin-bottom:10px">
+      ${['left','center','right'].map(v => `<button class="chip ${pos === v ? 'on' : ''}" data-img="pos" data-v="${v}">${v[0].toUpperCase() + v.slice(1)}</button>`).join('')}
+    </div>
+    <div class="pop-label">Size</div>
+    <div class="pop-row">
+      <input type="range" min="15" max="100" step="5" value="${parseInt(img.style.width) || 40}" data-img="size" aria-label="Photo size" style="width:150px">
+      <button class="icon-btn" data-img="delete" title="Remove photo" aria-label="Remove photo">${ICON.trash}</button>
+    </div>`, (e, pop) => {
+      const b = e.target.closest('[data-img]'); if (!b) return;
+      if (b.dataset.img === 'pos') {
+        img.classList.remove('pic-left','pic-center','pic-right'); img.classList.add('pic-' + b.dataset.v);
+        pop.querySelectorAll('[data-img="pos"]').forEach(x => x.classList.toggle('on', x === b));
+        contentChanged();
+      } else if (b.dataset.img === 'delete') { img.remove(); closePop(); selImg = null; contentChanged(); }
+    });
+  const range = document.querySelector('.pop [data-img="size"]');
+  range.addEventListener('input', () => { img.style.width = range.value + '%'; contentChanged(); });
+}
+document.addEventListener('pointerdown', e => {
+  if (selImg && !e.target.closest('.pop') && e.target !== selImg) {
+    selImg.classList.remove('sel'); selImg = null;
+    const c = contentEl(); if (c) { const j = J(); j.pages[S.page].html = c.innerHTML; saveJournal(j); }
+  }
+}, true);
+
+async function addImage(){
+  const keep = savedRange;
+  const f = await pickFile('image/*'); if (!f) return;
+  let src; try { src = await shrinkImage(f, 1200, /png|gif|webp/.test(f.type)); } catch { return toast('That image couldn’t be opened.'); }
+  savedRange = keep; restoreRange();
+  document.execCommand('insertHTML', false, `<img class="pic pic-right" src="${src}" style="width:40%" alt="">`);
+  contentChanged();
+}
+
+/* ---------------- stickers ---------------- */
+let selSticker = null;
+const paperObserver = new ResizeObserver(() => renderStickers());
+function renderStickers(){
+  const j = J(), layer = app.querySelector('.sticker-layer'); if (!j || !layer) return;
+  const W = layer.clientWidth || 1, p = j.pages[S.page];
+  p.stickers = (p.stickers || []).filter(s => isImgData(s.src));
+  layer.innerHTML = p.stickers.map(s => `
+    <div class="sticker ${s.id === selSticker ? 'sel' : ''}" data-sid="${s.id}" style="left:${s.x * W}px;top:${s.y * W}px;width:${s.w * W}px;transform:translate(-50%,-50%) rotate(${s.r}deg)">
+      <img src="${s.src}" alt="">
+      <span class="h tl" data-h></span><span class="h tr" data-h></span><span class="h bl" data-h></span><span class="h br" data-h></span>
+      <button class="rot" data-rot aria-label="Rotate sticker" title="Drag to rotate">${ICON.rot}</button>
+      <button class="del" data-del aria-label="Delete sticker" title="Delete sticker">${ICON.trash}</button>
+    </div>`).join('');
+}
+async function addSticker(){
+  const f = await pickFile('image/*'); if (!f) return;
+  let src; try { src = await shrinkImage(f, 700, true); } catch { return toast('That image couldn’t be opened.'); }
+  const j = J(), p = j.pages[S.page], layer = app.querySelector('.sticker-layer');
+  const W = layer.clientWidth, visTop = Math.max(0, -layer.getBoundingClientRect().top) + 140;
+  const s = {id:uid(), src, x:.5, y:Math.min(visTop, layer.clientHeight - 80) / W, w:.26, r:0};
+  p.stickers.push(s); selSticker = s.id; renderStickers(); saveJournal(j);
+}
+app.addEventListener('pointerdown', e => {
+  const el = e.target.closest('.sticker');
+  if (!el) { if (selSticker) { selSticker = null; renderStickers(); } return; }
+  const j = J(), p = j.pages[S.page], s = p.stickers.find(x => x.id === el.dataset.sid); if (!s) return;
+  if (e.target.closest('[data-del]')) {
+    e.preventDefault(); p.stickers = p.stickers.filter(x => x !== s); selSticker = null; renderStickers(); saveJournal(j); return;
+  }
+  e.preventDefault();
+  if (selSticker !== s.id) { app.querySelectorAll('.sticker.sel').forEach(x => x.classList.remove('sel')); el.classList.add('sel'); selSticker = s.id; }
+  const layer = app.querySelector('.sticker-layer'), lr = layer.getBoundingClientRect(), W = layer.clientWidth;
+  const cx = lr.left + s.x * W, cy = lr.top + s.y * W;
+  const mode = e.target.closest('[data-h]') ? 'resize' : e.target.closest('[data-rot]') ? 'rotate' : 'move';
+  const start = {px:e.clientX, py:e.clientY, x:s.x, y:s.y, w:s.w, r:s.r,
+    d:Math.hypot(e.clientX - cx, e.clientY - cy) || 1, a:Math.atan2(e.clientY - cy, e.clientX - cx)};
+  const move = ev => {
+    if (mode === 'move') { s.x = start.x + (ev.clientX - start.px) / W; s.y = Math.max(0, start.y + (ev.clientY - start.py) / W); }
+    else if (mode === 'resize') { s.w = Math.max(.05, Math.min(1.2, start.w * Math.hypot(ev.clientX - cx, ev.clientY - cy) / start.d)); }
+    else { s.r = Math.round((start.r + (Math.atan2(ev.clientY - cy, ev.clientX - cx) - start.a) * 180 / Math.PI) * 10) / 10; }
+    el.style.left = s.x * W + 'px'; el.style.top = s.y * W + 'px'; el.style.width = s.w * W + 'px';
+    el.style.transform = `translate(-50%,-50%) rotate(${s.r}deg)`;
+  };
+  const up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', up); saveJournal(j); };
+  window.addEventListener('pointermove', move); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up);
+});
+
+/* ---------------- toolbar & navigation events ---------------- */
+app.addEventListener('mousedown', e => { if (e.target.closest('.tb[data-cmd]')) e.preventDefault(); });
+app.addEventListener('click', async e => {
+  const cmd = e.target.closest('[data-cmd]');
+  if (cmd) { exec(cmd.dataset.cmd); return; }
+  const a = e.target.closest('[data-act]'); if (!a) return;
+  const act = a.dataset.act, j = J();
+  if (act === 'open') return openJournal(a.dataset.id);
+  if (act === 'edit') { e.stopPropagation(); return withUnlock(a.dataset.id, () => journalModal(S.journals.find(x => x.id === a.dataset.id))); }
+  if (act === 'new') return journalModal(null);
+  if (act === 'settings') return settingsModal();
+  if (act === 'filter') { S.filter = a.dataset.v; return render(); }
+  if (act === 'home') { flushSaves(); S.unlocked.delete(S.jid); S.view = 'home'; S.jid = null; selSticker = null; return render(); }
+  if (act === 'prev' && S.page > 0) { S.page--; selSticker = null; return render(); }
+  if (act === 'next' && S.page < j.pages.length - 1) { S.page++; selSticker = null; return render(); }
+  if (act === 'add-page') { j.pages.splice(S.page + 1, 0, newPage()); S.page++; saveJournal(j, true); return render(); }
+  if (act === 'del-page') {
+    const p = j.pages[S.page];
+    const hasStuff = (p.html && p.html.replace(/<[^>]*>|&nbsp;|\s/g, '')) || p.stickers.length || /<img/i.test(p.html || '') || p.subject;
+    if (hasStuff && !confirm('Delete this page? This can’t be undone.')) return;
+    if (j.pages.length === 1) j.pages[0] = newPage(); else { j.pages.splice(S.page, 1); S.page = Math.max(0, S.page - 1); }
+    saveJournal(j, true); return render();
+  }
+  if (act === 'subject') { j.showSubject = !j.showSubject; saveJournal(j); return render(); }
+  if (act === 'add-image') return addImage();
+  if (act === 'add-sticker') return addSticker();
+  if (act === 'date') { const di = app.querySelector('.date-input'); try { di.showPicker(); } catch { di.style.pointerEvents = 'auto'; di.focus(); di.click(); } return; }
+  if (act === 'paper') return paperPop(a);
+});
+app.addEventListener('keydown', e => {
+  const card = e.target.closest('.card');
+  if (card && e.target === card && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openJournal(card.dataset.id); }
+});
+app.addEventListener('change', e => {
+  const ctl = e.target.dataset.ctl; if (!ctl) return;
+  const j = J(), v = e.target.value;
+  if (ctl === 'block') { exec('formatBlock', '<' + v + '>'); return; }
+  if (ctl === 'color') { j.lastColor = v; e.target.previousElementSibling.style.background = v; exec('foreColor', v); return; }
+  if (ctl === 'font') {
+    if (hasSelection()) exec('fontName', v);
+    else { j.font = v; app.querySelector('.paper').style.setProperty('--page-font', fontStack(v)); saveJournal(j); }
+    return;
+  }
+  if (ctl === 'size') {
+    const px = Number(v);
+    if (hasSelection()) {
+      document.execCommand('fontSize', false, '7');
+      contentEl().querySelectorAll('font[size="7"]').forEach(f => { f.removeAttribute('size'); f.style.fontSize = px + 'px'; });
+      contentChanged();
+    } else { j.fontSize = px; app.querySelector('.paper').style.setProperty('--page-size', px + 'px'); saveJournal(j); }
+  }
+});
+function paperPop(anchor){
+  const j = J();
+  const draw = () => `
+    <div class="pop-label">Paper</div>
+    <div class="pop-row" style="margin-bottom:12px">
+      ${[['solid','Plain'],['lined','Lined'],['grid','Grid'],['dotted','Dotted']].map(([v, n]) => `<button class="paper-opt ${(j.paper || 'solid') === v ? 'on' : ''}" data-paper="${v}"><i class="p-${v}"></i>${n}</button>`).join('')}
+    </div>
+    <div class="pop-label">Line color</div>
+    <div class="pop-row">
+      ${LINE_COLORS.map(([n, c], i) => `<button class="dot ${(j.lineColor || 0) === i ? 'on' : ''}" data-line="${i}" title="${n}" aria-label="${n} lines" style="background:${c}"></button>`).join('')}
+    </div>`;
+  openPop(anchor, draw(), (e, pop) => {
+    const pb = e.target.closest('[data-paper]'), lb = e.target.closest('[data-line]');
+    const paper = app.querySelector('.paper');
+    if (pb) { j.paper = pb.dataset.paper; paper.classList.remove('p-lined','p-grid','p-dotted'); if (j.paper !== 'solid') paper.classList.add('p-' + j.paper); }
+    else if (lb) { j.lineColor = Number(lb.dataset.line); paper.style.setProperty('--rule', LINE_COLORS[j.lineColor][1]); }
+    else return;
+    saveJournal(j); pop.innerHTML = draw();
+  });
+}
+
+/* ---------------- journals & PIN ---------------- */
+function openJournal(id){
+  withUnlock(id, () => { S.jid = id; S.page = 0; S.view = 'editor'; selSticker = null; render(); });
+}
+function withUnlock(id, then){
+  const j = S.journals.find(x => x.id === id); if (!j) return;
+  if (!j.pinHash || S.unlocked.has(id)) return then();
+  pinPad('Enter PIN', `to open “${j.title || 'Untitled'}”`, async pin => {
+    if (await pinHash(pin, j.id) === j.pinHash) { S.unlocked.add(id); then(); return true; }
+    return false;
+  });
+}
+function pinPad(title, sub, check){
+  let pin = '';
+  modal(`<div class="pin-modal">
+      <h2 style="margin-bottom:4px">${esc(title)}</h2>
+      <p class="note" style="margin:0 0 16px">${esc(sub)}</p>
+      <div class="pin-dots" aria-live="polite">${'<i></i>'.repeat(4)}</div>
+      <div class="keypad">${[1,2,3,4,5,6,7,8,9].map(n => `<button class="key" data-k="${n}">${n}</button>`).join('')}
+        <span class="key blank"></span><button class="key" data-k="0">0</button><button class="key" data-k="back" aria-label="Delete digit">⌫</button></div>
+      <div class="pin-err"></div></div>`, (m, close) => {
+    const dots = m.querySelector('.pin-dots'), err = m.querySelector('.pin-err');
+    const draw = () => dots.querySelectorAll('i').forEach((d, i) => d.classList.toggle('f', i < pin.length));
+    const press = async k => {
+      if (k === 'back') pin = pin.slice(0, -1); else if (pin.length < 4) pin += k;
+      draw();
+      if (pin.length === 4) {
+        const ok = await check(pin);
+        if (ok) close();
+        else { err.textContent = 'Wrong PIN. Try again.'; dots.classList.remove('shake'); void dots.offsetWidth; dots.classList.add('shake'); pin = ''; setTimeout(draw, 250); }
+      }
+    };
+    m.addEventListener('click', e => { const k = e.target.closest('[data-k]'); if (k) press(k.dataset.k); });
+    m.addEventListener('keydown', e => { if (/^\d$/.test(e.key)) press(e.key); else if (e.key === 'Backspace') press('back'); });
+    m.tabIndex = -1; m.focus();
+  });
+}
+function journalModal(j){
+  const isNew = !j;
+  const d = j ? {title:j.title, cover:j.cover, coverColor:j.coverColor, category:j.category}
+              : {title:'', cover:null, coverColor:COVER_COLORS[S.journals.length % COVER_COLORS.length], category:S.fixedCat ?? (S.filter !== 'all' ? Number(S.filter) : null)};
+  const cats = S.settings.categories;
+  modal(`
+    <h2>${isNew ? 'New journal' : 'Edit journal'}</h2>
+    <div class="field"><label for="jm-title">Name</label><input id="jm-title" class="text-in" maxlength="60" placeholder="e.g. Autumn 2026" value="${esc(d.title)}"></div>
+    <div class="field"><span class="field-title">Cover</span>
+      <div class="cover-edit"><div class="jm-cover"></div>
+        <div class="cover-tools">
+          <div><button class="btn soft" data-m="upload">Upload cover photo</button></div>
+          <button class="ghost" data-m="remove" style="text-align:left;padding-left:0">Use a color instead</button>
+          <div class="chips">${COVER_COLORS.map(c => `<button class="dot" data-m="color" data-v="${c}" style="background:${c}" aria-label="Cover color ${c}"></button>`).join('')}</div>
+        </div></div></div>
+    <div class="field"><span class="field-title">Category</span>
+      <div class="chips"><button class="chip" data-m="cat" data-v="">None</button>${cats.map((c, i) => `<button class="chip" data-m="cat" data-v="${i}">${esc(c)}</button>`).join('')}</div></div>
+    <div class="field"><label for="jm-pin">PIN lock (optional)</label>
+      <input id="jm-pin" class="text-in" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="${j && j.pinHash ? 'Leave blank to keep current PIN' : '4 digits'}">
+      ${j && j.pinHash ? `<label class="toggle" style="justify-content:flex-start"><input type="checkbox" id="jm-nopin"> Remove PIN</label>` : ''}
+      <p class="note">A PIN keeps casual peekers out. It isn’t strong security, so keep truly private things elsewhere. If you forget it, the journal can’t be opened.</p></div>
+    <div class="modal-actions">
+      ${!isNew ? `<button class="btn danger" data-m="delete">Delete journal</button>` : ''}
+      <div class="right"><button class="btn soft" data-m="cancel">Cancel</button><button class="btn" data-m="save">${isNew ? 'Create' : 'Save'}</button></div>
+    </div>`, (m, close) => {
+    const titleIn = m.querySelector('#jm-title');
+    const draw = () => {
+      m.querySelector('.jm-cover').innerHTML = coverHTML({...d, title:titleIn.value || 'Untitled', pinHash:null});
+      m.querySelectorAll('[data-m="cat"]').forEach(b => b.classList.toggle('on', b.dataset.v === (d.category === null || d.category === undefined ? '' : String(d.category))));
+      m.querySelectorAll('[data-m="color"]').forEach(b => b.classList.toggle('on', !d.cover && b.dataset.v === d.coverColor));
+    };
+    draw(); titleIn.addEventListener('input', draw); setTimeout(() => titleIn.focus(), 30);
+    m.addEventListener('click', async e => {
+      const b = e.target.closest('[data-m]'); if (!b) return;
+      const k = b.dataset.m;
+      if (k === 'upload') { const f = await pickFile('image/*'); if (!f) return; try { d.cover = await shrinkImage(f, 900, false); } catch { toast('That image couldn’t be opened.'); } draw(); }
+      else if (k === 'remove') { d.cover = null; draw(); }
+      else if (k === 'color') { d.cover = null; d.coverColor = b.dataset.v; draw(); }
+      else if (k === 'cat') { d.category = b.dataset.v === '' ? null : Number(b.dataset.v); draw(); }
+      else if (k === 'cancel') close();
+      else if (k === 'delete') {
+        if (!confirm(`Delete “${j.title || 'Untitled'}” and all its pages? This can’t be undone.`)) return;
+        S.journals = S.journals.filter(x => x !== j); await kvDel('j:' + j.id); close();
+        if (S.jid === j.id) { S.view = 'home'; S.jid = null; } render();
+      } else if (k === 'save') {
+        const pin = m.querySelector('#jm-pin').value.trim();
+        if (pin && !/^\d{4}$/.test(pin)) { toast('PIN must be exactly 4 digits.'); return; }
+        const target = j || {id:uid(), created:Date.now(), pages:[newPage()], paper:'lined', lineColor:0, font:'Lora', fontSize:15, showSubject:false, pinHash:null};
+        target.title = titleIn.value.trim() || 'Untitled';
+        target.cover = d.cover; target.coverColor = d.coverColor; target.category = d.category;
+        if (m.querySelector('#jm-nopin')?.checked) target.pinHash = null;
+        else if (pin) { target.pinHash = await pinHash(pin, target.id); S.unlocked.add(target.id); }
+        if (isNew) S.journals.push(target);
+        await saveJournal(target, true); close(); render();
+        if (isNew) toast('Journal created');
+      }
+    });
+  });
+}
+
+/* ---------------- settings ---------------- */
+function settingsModal(){
+  const s = S.settings, base = location.href.split('#')[0];
+  modal(`
+    <h2>Settings</h2>
+    <div class="field"><label for="st-name">Shelf name</label><input id="st-name" class="text-in" maxlength="40" value="${esc(s.shelfName)}"></div>
+    <div class="field"><span class="field-title">Theme</span>
+      <div class="themes">${Object.entries(THEMES).map(([k, t]) => `<button class="theme-opt ${s.theme === k ? 'on' : ''}" data-theme="${k}">
+        <span><b style="background:${t.c.bg}"></b><b style="background:${t.c.paper}"></b><b style="background:${t.c.accent}"></b></span>${t.name}${t.dark ? ' (dark)' : ''}</button>`).join('')}</div></div>
+    <div class="field"><label for="st-font">App font</label>
+      <select id="st-font" class="text-in">${APP_FONTS.map(f => `<option ${f[0] === s.appFont ? 'selected' : ''} style="font-family:'${f[0]}'">${f[0]}</option>`).join('')}</select></div>
+    <div class="field"><span class="field-title">Categories</span>
+      ${s.categories.map((c, i) => `<input class="text-in st-cat" data-i="${i}" maxlength="24" value="${esc(c)}" style="margin-bottom:6px" aria-label="Category ${i + 1} name">`).join('')}</div>
+    <div class="field"><span class="field-title">Category embed links</span>
+      <p class="note" style="margin:0 0 8px">Paste one of these into a Notion /embed block to show only that category’s journals.</p>
+      ${s.categories.map((c, i) => `<div class="link-row"><input class="text-in" readonly value="${esc(base)}#cat${i + 1}" aria-label="${esc(c)} embed link"><button class="btn soft" data-copy="${i}">Copy</button></div>`).join('')}</div>
+    <div class="field"><span class="field-title">Embedding in Notion</span>
+      <div class="toggle"><span>Transparent background</span><label class="switch"><input type="checkbox" id="st-trans" ${s.transparent ? 'checked' : ''}><i></i></label></div>
+      <div class="toggle"><span>My Notion page is dark</span><label class="switch"><input type="checkbox" id="st-dark" ${s.darkPage ? 'checked' : ''}><i></i></label></div></div>
+    <div class="field"><span class="field-title">Cover ideas</span>
+      <a href="https://www.pinterest.com/search/pins/?q=aesthetic%20journal%20cover" target="_blank" rel="noopener" style="color:var(--accent);font-size:13px">Browse journal cover inspiration on Pinterest</a></div>
+    <div class="field"><span class="field-title">Backup</span>
+      <div class="chips"><button class="btn soft" data-m="export">Download backup</button><button class="btn soft" data-m="import">Restore from backup</button></div>
+      <p class="note">Your journals are saved only in this browser on this device. Download a backup regularly, and use it to move journals to another device. Last backup: ${s.lastBackup ? new Date(s.lastBackup).toLocaleDateString() : 'never'}.</p></div>
+    <div class="modal-actions"><div class="right"><button class="btn" data-m="done">Done</button></div></div>`, (m, close) => {
+    const live = () => { applyTheme(); };
+    m.querySelector('#st-name').addEventListener('input', e => { s.shelfName = e.target.value || 'My journals'; saveSettings(); });
+    m.querySelector('#st-font').addEventListener('change', e => { s.appFont = e.target.value; saveSettings(); live(); });
+    m.querySelectorAll('.st-cat').forEach(inp => inp.addEventListener('input', () => { s.categories[inp.dataset.i] = inp.value || `Category ${Number(inp.dataset.i) + 1}`; saveSettings(); }));
+    m.querySelector('#st-trans').addEventListener('change', e => { s.transparent = e.target.checked; saveSettings(); live(); });
+    m.querySelector('#st-dark').addEventListener('change', e => { s.darkPage = e.target.checked; saveSettings(); live(); });
+    m.addEventListener('click', async e => {
+      const th = e.target.closest('[data-theme]');
+      if (th) { s.theme = th.dataset.theme; saveSettings(); live(); m.querySelectorAll('.theme-opt').forEach(x => x.classList.toggle('on', x === th)); return; }
+      const cp = e.target.closest('[data-copy]');
+      if (cp) {
+        const inp = cp.previousElementSibling;
+        try { await navigator.clipboard.writeText(inp.value); toast('Link copied'); } catch { inp.select(); toast('Select the link and copy it'); }
+        return;
+      }
+      const b = e.target.closest('[data-m]'); if (!b) return;
+      if (b.dataset.m === 'done') { close(); render(); }
+      else if (b.dataset.m === 'export') exportBackup(m);
+      else if (b.dataset.m === 'import') importBackup(close);
+    });
+  });
+}
+function exportBackup(m){
+  flushSaves();
+  const data = {app:'journal-shelf', version:1, exported:new Date().toISOString(), settings:S.settings, journals:S.journals};
+  const blob = new Blob([JSON.stringify(data)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = `journal-backup-${todayISO()}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  S.settings.lastBackup = Date.now(); saveSettings();
+  toast('Backup downloaded. If nothing saved, open the widget link in your browser and try there.');
+}
+async function importBackup(closeSettings){
+  const f = await pickFile('application/json,.json'); if (!f) return;
+  let data; try { data = JSON.parse(await f.text()); } catch { return toast('That file isn’t a journal backup.'); }
+  if (!data || !Array.isArray(data.journals)) return toast('That file isn’t a journal backup.');
+  const valid = data.journals.filter(j => j && typeof j.id === 'string' && Array.isArray(j.pages));
+  if (!confirm(`Restore ${valid.length} journal${valid.length === 1 ? '' : 's'}? Journals with the same name from this backup will replace the ones here.`)) return;
+  for (const j of valid) {
+    j.pages.forEach(p => { p.stickers = Array.isArray(p.stickers) ? p.stickers : []; p.html = typeof p.html === 'string' ? p.html : ''; });
+    if (!isImgData(j.cover)) j.cover = null;
+    const i = S.journals.findIndex(x => x.id === j.id);
+    if (i >= 0) S.journals[i] = j; else S.journals.push(j);
+    await kvSet('j:' + j.id, j);
+  }
+  if (data.settings && Array.isArray(data.settings.categories)) { S.settings.categories = data.settings.categories.slice(0, 3).map(String); saveSettings(); }
+  closeSettings(); render(); toast('Backup restored');
+}
+
+/* ---------------- start ---------------- */
+function readHash(){
+  const m = location.hash.match(/^#cat([123])$/);
+  S.fixedCat = m ? Number(m[1]) - 1 : null;
+}
+window.addEventListener('hashchange', () => { readHash(); if (S.view === 'home') render(); });
+(async function init(){
+  readHash();
+  const all = await kvLoadAll();
+  const st = all.get('settings');
+  if (st) S.settings = {...DEFAULT_SETTINGS, ...st, categories:(st.categories || DEFAULT_SETTINGS.categories).slice(0, 3)};
+  for (const [k, v] of all) if (typeof k === 'string' && k.startsWith('j:') && v && Array.isArray(v.pages)) S.journals.push(v);
+  render();
+  if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+})();
+</script>
+</body>
+</html>
